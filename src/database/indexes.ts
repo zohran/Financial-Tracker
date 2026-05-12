@@ -11,26 +11,6 @@ type IndexSpec = {
   unique?: boolean;
 };
 
-type MongoIndex = { name: string; key: Record<string, unknown> };
-
-type MongoCollectionLike = {
-  indexes: () => Promise<MongoIndex[]>;
-  dropIndex: (name: string) => Promise<unknown>;
-  createIndex: (
-    key: Record<string, 1 | -1>,
-    options?: { name?: string; unique?: boolean },
-  ) => Promise<unknown>;
-};
-
-type MongoDbLike = {
-  collection: (name: string) => MongoCollectionLike;
-};
-
-type DataSourceMongoInternals = {
-  mongoManager?: { connection?: { db?: MongoDbLike } };
-  driver?: { databaseConnection?: { db?: MongoDbLike } };
-};
-
 function sameKey(a: Record<string, unknown>, b: Record<string, unknown>) {
   const ak = Object.keys(a);
   const bk = Object.keys(b);
@@ -54,10 +34,11 @@ function sameKey(a: Record<string, unknown>, b: Record<string, unknown>) {
 export async function ensureMongoIndexes(ds: DataSource) {
   // TypeORM's Mongo driver keeps the native db on internal connection objects.
   // We access it defensively to avoid version coupling.
-  const dsInternals = ds as unknown as DataSourceMongoInternals;
-  const db: MongoDbLike | undefined =
-    dsInternals.mongoManager?.connection?.db ??
-    dsInternals.driver?.databaseConnection?.db;
+  const db =
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (ds.mongoManager as any)?.connection?.db ??
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (ds.driver as any)?.databaseConnection?.db;
 
   if (!db) {
     // eslint-disable-next-line no-console
@@ -111,7 +92,8 @@ export async function ensureMongoIndexes(ds: DataSource) {
 
   for (const [collection, specs] of byCollection) {
     const col = db.collection(collection);
-    const existing = await col.indexes();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const existing = (await col.indexes()) as any[];
 
     for (const spec of specs) {
       const existingByName = existing.find((i) => i.name === spec.name);

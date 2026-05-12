@@ -13,8 +13,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(function 
   { className, label, error, id, options, ...props },
   ref,
 ) {
-  const generatedId = React.useId();
-  const selectId = id ?? generatedId;
+  const selectId = id ?? React.useId();
 
   return (
     <div className="space-y-2">
